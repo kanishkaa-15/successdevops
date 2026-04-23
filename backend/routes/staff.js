@@ -1,0 +1,101 @@
+const express = require('express');
+const Staff = require('../models/Staff');
+const { protect } = require('../middleware/authMiddleware');
+const { rbac } = require('../middleware/rbac');
+const AuditLog = require('../models/AuditLog');
+const router = express.Router();
+
+// GET all staff (Protected)
+router.get('/', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const staff = await Staff.find().sort({ createdAt: -1 });
+    res.json(staff);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// GET staff by ID (Protected)
+router.get('/:id', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const member = await Staff.findById(req.params.id);
+    if (!member) return res.status(404).json({ message: 'Staff member not found' });
+    res.json(member);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// POST new staff member (Protected)
+router.post('/', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const member = new Staff(req.body);
+    await member.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('newStaff', member);
+    }
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'CREATE_DATA',
+      endpoint: '/api/staff',
+      details: { staffId: member._id, name: member.name }
+    });
+
+    res.status(201).json(member);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// PUT update staff member (Protected)
+router.put('/:id', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const member = await Staff.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!member) return res.status(404).json({ message: 'Staff member not found' });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('updateStaff', member);
+    }
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'UPDATE_DATA',
+      endpoint: `/api/staff/${req.params.id}`,
+      details: { staffId: member._id }
+    });
+
+    res.json(member);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// DELETE staff member (Protected)
+router.delete('/:id', protect, rbac(['ceo', 'admin']), async (req, res) => {
+  try {
+    const member = await Staff.findByIdAndDelete(req.params.id);
+    if (!member) return res.status(404).json({ message: 'Staff member not found' });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('deleteStaff', { id: req.params.id });
+    }
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'DELETE_DATA',
+      endpoint: `/api/staff/${req.params.id}`,
+      details: { staffId: req.params.id }
+    });
+
+    res.json({ message: 'Staff member deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+module.exports = router;
