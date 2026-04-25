@@ -41,7 +41,13 @@ pipeline {
                         echo '📦 Installing frontend dependencies...'
                         bat 'npm install'
                         echo '🔍 Linting frontend...'
-                        bat 'npm run lint || echo "Linting failed, continuing to build..." '
+                        script {
+                            try {
+                                bat 'npm run lint'
+                            } catch (Exception e) {
+                                echo "⚠️ Linting failed, but proceeding with the build as requested."
+                            }
+                        }
                     }
                 }
                 stage('Backend') {
