@@ -13,8 +13,8 @@ pipeline {
         IMAGE_BACKEND        = "${DOCKER_REGISTRY}/${params.IMAGE_NAME_BACKEND}"
         IMAGE_FRONTEND       = "${DOCKER_REGISTRY}/${params.IMAGE_NAME_FRONTEND}"
         IMAGE_TAG            = "build-${BUILD_NUMBER}"
-        KUBECONFIG_PATH      = "/var/jenkins_home/.kube/config"
-        KUBECTL_BINARY       = "/var/jenkins_home/kubectl"
+        KUBECONFIG_PATH      = "C:\\Users\\kanishkaa boopathi\\.kube\\config"
+        KUBECTL_BINARY       = "kubectl"
         GHCR_CREDENTIALS_ID  = "ghcr-credentials1"
     }
 
@@ -39,15 +39,15 @@ pipeline {
                 stage('Frontend') {
                     steps {
                         echo '📦 Installing frontend dependencies...'
-                        sh 'npm install'
+                        bat 'npm install'
                         echo '🔍 Linting frontend...'
-                        sh 'npm run lint'
+                        bat 'npm run lint'
                     }
                 }
                 stage('Backend') {
                     steps {
                         echo '📦 Installing backend dependencies...'
-                        sh 'cd backend && npm install'
+                        bat 'cd backend && npm install'
                     }
                 }
             }
@@ -67,7 +67,7 @@ pipeline {
         stage('🏗️  Build Application') {
             steps {
                 echo '🏗️  Building Next.js for production...'
-                sh 'npm run build'
+                bat 'npm run build'
             }
         }
 
@@ -80,19 +80,19 @@ pipeline {
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
-                        sh "echo \"\$DOCKER_PASS\" | docker login ghcr.io -u ${params.GHCR_USER} --password-stdin"
+                        bat "docker login ghcr.io -u ${params.GHCR_USER} -p %DOCKER_PASS%"
                         
                         echo '🐳 Building and Pushing Backend Image...'
-                        sh "docker build -t ${IMAGE_BACKEND}:${IMAGE_TAG} ./backend"
-                        sh "docker tag ${IMAGE_BACKEND}:${IMAGE_TAG} ${IMAGE_BACKEND}:latest"
-                        sh "docker push ${IMAGE_BACKEND}:${IMAGE_TAG}"
-                        sh "docker push ${IMAGE_BACKEND}:latest"
+                        bat "docker build -t ${IMAGE_BACKEND}:${IMAGE_TAG} ./backend"
+                        bat "docker tag ${IMAGE_BACKEND}:${IMAGE_TAG} ${IMAGE_BACKEND}:latest"
+                        bat "docker push ${IMAGE_BACKEND}:${IMAGE_TAG}"
+                        bat "docker push ${IMAGE_BACKEND}:latest"
 
                         echo '🐳 Building and Pushing Frontend Image...'
-                        sh "docker build -t ${IMAGE_FRONTEND}:${IMAGE_TAG} ."
-                        sh "docker tag ${IMAGE_FRONTEND}:${IMAGE_TAG} ${IMAGE_FRONTEND}:latest"
-                        sh "docker push ${IMAGE_FRONTEND}:${IMAGE_TAG}"
-                        sh "docker push ${IMAGE_FRONTEND}:latest"
+                        bat "docker build -t ${IMAGE_FRONTEND}:${IMAGE_TAG} ."
+                        bat "docker tag ${IMAGE_FRONTEND}:${IMAGE_TAG} ${IMAGE_FRONTEND}:latest"
+                        bat "docker push ${IMAGE_FRONTEND}:${IMAGE_TAG}"
+                        bat "docker push ${IMAGE_FRONTEND}:latest"
                     }
                 }
             }
@@ -108,28 +108,28 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
                         // Create secret for GHCR
-                        sh """
-                            ${KUBECTL_BINARY} --kubeconfig=${KUBECONFIG_PATH} \\
-                            create secret docker-registry ghcr-secret \\
-                            --docker-server=ghcr.io \\
-                            --docker-username=${params.GHCR_USER} \\
-                            --docker-password=\$DOCKER_PASS \\
-                            --dry-run=client -o yaml | \\
-                            ${KUBECTL_BINARY} --kubeconfig=${KUBECONFIG_PATH} apply -f -
+                        powershell """
+                            ${KUBECTL_BINARY} --kubeconfig='${KUBECONFIG_PATH}' `
+                            create secret docker-registry ghcr-secret `
+                            --docker-server=ghcr.io `
+                            --docker-username=${params.GHCR_USER} `
+                            --docker-password=\$env:DOCKER_PASS `
+                            --dry-run=client -o yaml | `
+                            ${KUBECTL_BINARY} --kubeconfig='${KUBECONFIG_PATH}' apply -f -
                         """
 
-                        // Update image tags in manifests
-                        sh """
-                            sed -i 's|image: .*school-ceo-backend.*|image: ${IMAGE_BACKEND}:${IMAGE_TAG}|g' k8s/backend.yaml
-                            sed -i 's|image: .*school-ceo-frontend.*|image: ${IMAGE_FRONTEND}:${IMAGE_TAG}|g' k8s/frontend.yaml
+                        // Update image tags in manifests using PowerShell
+                        powershell """
+                            (Get-Content k8s/backend.yaml) -replace 'image: .*school-ceo-backend.*', 'image: ${env.IMAGE_BACKEND}:${env.IMAGE_TAG}' | Set-Content -Encoding utf8 k8s/backend.yaml
+                            (Get-Content k8s/frontend.yaml) -replace 'image: .*school-ceo-frontend.*', 'image: ${env.IMAGE_FRONTEND}:${env.IMAGE_TAG}' | Set-Content -Encoding utf8 k8s/frontend.yaml
                         """
 
                         echo '☸️ Applying Kubernetes manifests...'
-                        sh "${KUBECTL_BINARY} --kubeconfig=${KUBECONFIG_PATH} apply -f k8s/"
+                        bat "${KUBECTL_BINARY} --kubeconfig=\"${KUBECONFIG_PATH}\" apply -f k8s/"
                         
                         echo '☸️ Waiting for deployment to complete...'
-                        sh "${KUBECTL_BINARY} --kubeconfig=${KUBECONFIG_PATH} rollout status deployment/backend --timeout=120s"
-                        sh "${KUBECTL_BINARY} --kubeconfig=${KUBECONFIG_PATH} rollout status deployment/frontend --timeout=120s"
+                        bat "${KUBECTL_BINARY} --kubeconfig=\"${KUBECONFIG_PATH}\" rollout status deployment/backend --timeout=120s"
+                        bat "${KUBECTL_BINARY} --kubeconfig=\"${KUBECONFIG_PATH}\" rollout status deployment/frontend --timeout=120s"
                     }
                 }
             }
