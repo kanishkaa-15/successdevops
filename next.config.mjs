@@ -6,10 +6,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
-    turbo: {
-      root: 'D:/school-ceo-dashboard review 1/school-ceo-dashboard'
-    }
+    // Removed hardcoded local root path
   }
 }
 
