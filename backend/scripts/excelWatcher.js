@@ -10,8 +10,8 @@ const Announcement = require('../models/Announcement');
  * When an Excel file is added or modified, it triggers the import service.
  */
 const initExcelWatcher = (io) => {
-  // Use a relative path from the processed location
-  const watchDir = path.join(__dirname, '../../excel-imports');
+  // Use a relative path from the app root (D:/scd-devops/school-ceo-dashboard-main/backend/)
+  const watchDir = path.join(process.cwd(), 'excel-imports');
 
   if (!fs.existsSync(watchDir)) {
     fs.mkdirSync(watchDir, { recursive: true });
