@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    
+    triggers {
+        githubPush()
+    }
 
     parameters {
         string(name: 'GHCR_USER', defaultValue: 'kanishkaa-15', description: 'GitHub Username')
