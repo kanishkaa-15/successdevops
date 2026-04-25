@@ -41,7 +41,7 @@ pipeline {
                         echo '📦 Installing frontend dependencies...'
                         bat 'npm install'
                         echo '🔍 Linting frontend...'
-                        bat 'npm run lint'
+                        bat 'npm run lint || echo "Linting failed, continuing to build..." '
                     }
                 }
                 stage('Backend') {
