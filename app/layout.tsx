@@ -12,7 +12,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'School CEO Dashboard',
-  description: 'Executive dashboard for school administration and analytics',
+  description: 'Executive dashboard for school administ',
   generator: 'v0.app',
   icons: {
     icon: [
